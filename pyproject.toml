@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "example"
+name = "mlops"
 version = "0.1.0"
 description = ""
 authors = ["your_name@example.com"]

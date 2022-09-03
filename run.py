@@ -1,9 +1,7 @@
 import sys
-import importlib
 args = sys.argv
 
+from mlops import run
+
 if __name__ == "__main__":
-    name = args[1] + ".main"
-    print(f"run: {name}")
-    mod = importlib.import_module(name)
-    print(mod.init())
+    run(args[1], "main")

@@ -1,120 +1,99 @@
+from mlops import experiment, ExperimentConf
+# The data set used in this example is from http://archive.ics.uci.edu/ml/datasets/Wine+Quality
+# P. Cortez, A. Cerdeira, F. Almeida, T. Matos and J. Reis.
+# Modeling wine preferences by data mining from physicochemical properties. In Decision Support Systems, Elsevier, 47(4):547-553, 2009.
 
-from pathlib import Path
+import warnings
+
+import pandas as pd
+import numpy as np
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import ElasticNet
 import mlflow
-import json
-from typing import Union, Any, Dict
-from pydantic import BaseModel
-from functools import partial
+import mlflow.sklearn
+
 import logging
-from urllib.parse import urlparse
-from mlflow.entities import Experiment
 
-class ExperimentConf(BaseModel):
-    id: str
-    name: str
-    public_name: str
-    description: str = "",
-    tags: Dict[str, Union[str, str]] = {}
-    params: dict = {}
+logging.basicConfig(level=logging.WARN)
+logger = logging.getLogger(__name__)
 
 
-class MlException(Exception):
-    ...
-
-def open_config(file_path=None) -> dict:
-    try:
-        with open(file_path) as f:
-            conf = json.load(f)
-    except FileNotFoundError as e:
-        raise
-
-    if not isinstance(conf, dict):
-        raise TypeError()
-
-    if "name" not in conf:
-        raise TypeError()
-
-    if "tags" not in conf:
-        conf["tags"] = {}
-    
-    if not isinstance(conf["tags"], dict):
-        raise TypeError()
-
-    return conf
-
-def write_conf(file_path=None):
-    ...
+def eval_metrics(actual, pred):
+    rmse = np.sqrt(mean_squared_error(actual, pred))
+    mae = mean_absolute_error(actual, pred)
+    r2 = r2_score(actual, pred)
+    return rmse, mae, r2
 
 
-def get_or_create_experiment(name: str) -> Experiment:
-    experiment = mlflow.get_experiment_by_name(name)
-    if experiment:
-        return experiment
+from pydantic import BaseModel
 
-    experiment_id = mlflow.create_experiment('sklearn-elasticnet-wine')
-    experiment = mlflow.get_experiment(experiment_id)
-    return experiment
-
-
-def normalize_tags(tags: Union[str, dict]):
-    if isinstance(tags, str):
-        return {
-            tags: ""
-        }
-    else:
-        return tags
-
-
-def experiment(tags: Union[str, dict]):
-    func = partial(ml, tags=tags)
-    return func
-    
-
-
-def ml(func, *, tags: str = "default"):
-    def wrapped(conf_path: Union[str, Path, None] = None):
-        if conf_path is None:
-            conf_path = Path(__file__).absolute().parent / "mlconf.json"
-
-        if isinstance(conf_path, (str, Path)):
-            conf = open_config(conf_path)
-        else:
-            raise MlException()
-
-        experiment = get_or_create_experiment(conf["name"])
-        if conf.get("id", None) != experiment.experiment_id:
-            conf["id"] = experiment.experiment_id
-
-        nonlocal tags
-        tags = normalize_tags(tags)
-        conf = ExperimentConf(**conf)
-        with open(conf_path, "w") as f:
-            json.dump(conf.dict(), f, ensure_ascii=False, indent=4)
-
-        experiment.tags.update({**conf.tags, **tags})
-        
-
-        print(experiment)
-        with mlflow.start_run(experiment_id=experiment.experiment_id, nested=True):
-            mlflow.set_tags(experiment.tags)
-            model = func(conf)
-            tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
-
-            # Model registry does not work with file store
-            if tracking_url_type_store != "file":
-                # Register the model
-                # There are other ways to use the Model Registry, which depends on the use case,
-                # please refer to the doc for more information:
-                # https://mlflow.org/docs/latest/model-registry.html#api-workflow
-                mlflow.sklearn.log_model(model, "model", registered_model_name=conf.public_name)
-            else:
-                mlflow.sklearn.log_model(model, "model")
-            return model
-    return wrapped
-
-
+class Params(BaseModel):
+    alpha: float = 0.5
+    l1_ratio: float = 0.5
 
 @experiment(tags="default")
-def init(conf: ExperimentConf):
-    from .process import run
-    run(conf)
+def run(conf: ExperimentConf):
+    warnings.filterwarnings("ignore")
+    np.random.seed(40)
+
+    params = Params(**conf.params)
+    alpha = params.alpha
+    l1_ratio = params.l1_ratio
+
+    # Read the wine-quality csv file from the URL
+    csv_url = "http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv"
+    try:
+        data = pd.read_csv(csv_url, sep=";")
+    except Exception as e:
+        logger.exception(
+            "Unable to download training & test CSV, check your internet connection. Error: %s", e
+        )
+
+    # Split the data into training and test sets. (0.75, 0.25) split.
+    train, test = train_test_split(data)
+
+    # The predicted column is "quality" which is a scalar from [3, 9]
+    train_x = train.drop(["quality"], axis=1)
+    test_x = test.drop(["quality"], axis=1)
+    train_y = train[["quality"]]
+    test_y = test[["quality"]]
+
+    # start run
+    lr = ElasticNet(alpha=alpha, l1_ratio=l1_ratio, random_state=42)
+    lr.fit(train_x, train_y)
+
+    predicted_qualities = lr.predict(test_x)
+
+    (rmse, mae, r2) = eval_metrics(test_y, predicted_qualities)
+
+    print("Elasticnet model (alpha=%f, l1_ratio=%f):" % (alpha, l1_ratio))
+    print("  RMSE: %s" % rmse)
+    print("  MAE: %s" % mae)
+    print("  R2: %s" % r2)
+
+    mlflow.log_params(dict(
+        alpha=alpha,
+        l1_ratio=l1_ratio
+    ))
+    mlflow.log_metrics(dict(
+        rmse=rmse,
+        r2=r2,
+        mae=mae
+    ))
+
+    # tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
+
+    # # Model registry does not work with file store
+    # if tracking_url_type_store != "file":
+
+    #     # Register the model
+    #     # There are other ways to use the Model Registry, which depends on the use case,
+    #     # please refer to the doc for more information:
+    #     # https://mlflow.org/docs/latest/model-registry.html#api-workflow
+    #     mlflow.sklearn.log_model(lr, "model", registered_model_name="ElasticnetWineModel")
+    # else:
+    #     mlflow.sklearn.log_model(lr, "model")
+
+    return lr
+
