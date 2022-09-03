@@ -39,6 +39,7 @@ exclude = [
     '^mlops\.py$'
 ]
 
+implicit_reexport = true  # __all__を強制する
 warn_return_any = false
 show_error_codes = true
 follow_imports = "silent"
