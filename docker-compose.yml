@@ -1,1 +1,15 @@
-docker pull nvidia/cuda:11.7.1-runtime-ubuntu20.04
+version: "3.3"
+services:
+  "3.8.6":
+    build:
+      context: .
+      dockerfile: ./containers/cuda:11.7.1-runtime-ubuntu20.04.dockerfile
+      args:
+        - PYTHON_VERSION=3.8.6
+    environment:
+      - TZ=Asia/Tokyo
+    volumes:
+      - .:/root/app
+
+# docker compose build 3.8.6
+# docker-compose run --rm 3.8.6 /bin/bash
