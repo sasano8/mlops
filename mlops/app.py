@@ -74,29 +74,28 @@ def experiment(tags: Union[str, dict]):
 
 
 def ml(func, *, tags: str = "default"):
-    print(inspect.getmodule(func).__file__)
+    mod_path = inspect.getmodule(func).__file__  # noqa
 
     def wrapped(conf_path: Union[str, Path, None] = None):
         if conf_path is None:
-            mod_path = inspect.getmodule(func).__file__
             conf_path = Path(mod_path).absolute().parent / "mlconf.json"
 
         if isinstance(conf_path, (str, Path)):
-            conf = open_config(conf_path)
+            _conf = open_config(conf_path)
         else:
             raise MlException()
 
-        experiment = get_or_create_experiment(conf["name"])
-        if conf.get("id", None) != experiment.experiment_id:
-            conf["id"] = experiment.experiment_id
+        experiment = get_or_create_experiment(_conf["name"])
+        if _conf.get("id", None) != experiment.experiment_id:
+            _conf["id"] = experiment.experiment_id
 
         nonlocal tags
-        tags = normalize_tags(tags)
-        conf = ExperimentConf(**conf)
+        normalized_tags = normalize_tags(tags)
+        conf = ExperimentConf(**_conf)
         with open(conf_path, "w") as f:
             json.dump(conf.dict(), f, ensure_ascii=False, indent=4)
 
-        experiment.tags.update({**conf.tags, **tags})
+        experiment.tags.update({**conf.tags, **normalized_tags})
 
         print(experiment)
         with mlflow.start_run(experiment_id=experiment.experiment_id, nested=True):

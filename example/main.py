@@ -44,12 +44,12 @@ def run(conf: ExperimentConf):
     p = Params(**conf.params)
 
     # Read the wine-quality csv file from the URL
-    csv_url = "http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv"
+    csv_url = "http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv"  # noqa
     try:
         data = pd.read_csv(csv_url, sep=";")
     except Exception as e:
         logger.exception(
-            "Unable to download training & test CSV, check your internet connection. Error: %s",
+            "Unable to download training & test CSV, check your internet connection. Error: %s",  # noqa
             e,
         )
 

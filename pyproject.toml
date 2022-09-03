@@ -19,6 +19,10 @@ flake8 = "^5.0.4"
 mypy = "^0.971"
 isort = "^5.10.1"
 
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.black]
 extend-exclude = '''
 ^/mlflow/*|
@@ -27,8 +31,31 @@ extend-exclude = '''
 
 [tool.isort]
 profile = "black"
+multi_line_output = 3
 skip = ["mlflow", "mlruns", ".venv"]
 
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.mypy]
+exclude = [
+    '^mlops\.py$'
+]
+
+warn_return_any = false
+show_error_codes = true
+follow_imports = "silent"
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_any_generics = false  # ListやDictなどのジェネリクスを強制する
+check_untyped_defs = true
+no_implicit_reexport = true  # モジュールにインポートされた属性の再エクスポートを抑制するか否か
+
+# disallow_untyped_defs = true for strict mypy: (this is the tricky one :-))
+disallow_untyped_defs = false
+
+# [pydantic-mypy]
+# init_forbid_extra = true
+# init_typed = true
+# warn_required_dynamic_aliases = true
+# warn_untyped_fields = true
+
+# pyproject.tomlに未対応（サポートする意思はあるようが、技術的に理由でブロックされている）
+# [tool.flake8]
