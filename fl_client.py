@@ -1,5 +1,28 @@
 import flwr as fl
 import tensorflow as tf
+from pydantic import BaseModel
+
+
+class FitConfig(BaseModel):
+    epochs: int = 1
+    batch_size: int = 32
+
+
+class LoadConfig(BaseModel):
+    func: str = "tf.keras.datasets.cifar10.load_data"
+    args: list = []
+    kwargs: dict = {}
+
+
+class TransformConfig(BaseModel):
+    slice: list = None  # islice([], 1,1,1)
+
+
+class Configs(BaseModel):
+    server_address: str = "127.0.0.1:8080"
+    fit: FitConfig = FitConfig()
+    load: LoadConfig = LoadConfig()
+    transform: TransformConfig = TransformConfig()
 
 
 # Define Flower client
@@ -34,6 +57,11 @@ class CifarClient(fl.client.NumPyClient):
         loss, accuracy = self.model.evaluate(self.x_test, self.y_test)
         return loss, len(self.x_test), {"accuracy": accuracy}
 
+    @classmethod
+    def run(cls, configs: Configs = None):
+        """Start Flower client"""
+        configs = configs or Configs()
+        fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=cls())
 
-# Start Flower client
-fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=CifarClient())
+
+CifarClient.run()
