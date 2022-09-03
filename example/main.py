@@ -6,13 +6,15 @@ from typing import Union, Any, Dict
 from pydantic import BaseModel
 from functools import partial
 import logging
-
+from urllib.parse import urlparse
 from mlflow.entities import Experiment
 
 class ExperimentConf(BaseModel):
     id: str
     name: str
-    tags: Dict[str, Union[str, None]] = {}
+    public_name: str
+    description: str = "",
+    tags: Dict[str, Union[str, str]] = {}
     params: dict = {}
 
 
@@ -57,13 +59,13 @@ def get_or_create_experiment(name: str) -> Experiment:
 def normalize_tags(tags: Union[str, dict]):
     if isinstance(tags, str):
         return {
-            tags: None
+            tags: ""
         }
     else:
         return tags
 
 
-def experiment(tags):
+def experiment(tags: Union[str, dict]):
     func = partial(ml, tags=tags)
     return func
     
@@ -71,9 +73,6 @@ def experiment(tags):
 
 def ml(func, *, tags: str = "default"):
     def wrapped(conf_path: Union[str, Path, None] = None):
-        if __name__ == "__main__":
-            ...
-
         if conf_path is None:
             conf_path = Path(__file__).absolute().parent / "mlconf.json"
 
@@ -90,14 +89,27 @@ def ml(func, *, tags: str = "default"):
         tags = normalize_tags(tags)
         conf = ExperimentConf(**conf)
         with open(conf_path, "w") as f:
-            json.dump(conf.dict(), f)
+            json.dump(conf.dict(), f, ensure_ascii=False, indent=4)
 
         experiment.tags.update({**conf.tags, **tags})
-        mlflow.set_tags(experiment.tags)
+        
 
+        print(experiment)
         with mlflow.start_run(experiment_id=experiment.experiment_id, nested=True):
-            results = func(conf)
-            return results
+            mlflow.set_tags(experiment.tags)
+            model = func(conf)
+            tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
+
+            # Model registry does not work with file store
+            if tracking_url_type_store != "file":
+                # Register the model
+                # There are other ways to use the Model Registry, which depends on the use case,
+                # please refer to the doc for more information:
+                # https://mlflow.org/docs/latest/model-registry.html#api-workflow
+                mlflow.sklearn.log_model(model, "model", registered_model_name=conf.public_name)
+            else:
+                mlflow.sklearn.log_model(model, "model")
+            return model
     return wrapped
 
 
@@ -106,7 +118,3 @@ def ml(func, *, tags: str = "default"):
 def init(conf: ExperimentConf):
     from .process import run
     run(conf)
-
-
-# if __name__ == "__main__":
-#     print(init())

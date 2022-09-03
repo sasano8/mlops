@@ -4,16 +4,13 @@ from example.main import ExperimentConf
 # P. Cortez, A. Cerdeira, F. Almeida, T. Matos and J. Reis.
 # Modeling wine preferences by data mining from physicochemical properties. In Decision Support Systems, Elsevier, 47(4):547-553, 2009.
 
-import os
 import warnings
-import sys
 
 import pandas as pd
 import numpy as np
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import ElasticNet
-from urllib.parse import urlparse
 import mlflow
 import mlflow.sklearn
 
@@ -45,9 +42,7 @@ def run(conf: ExperimentConf):
     l1_ratio = params.l1_ratio
 
     # Read the wine-quality csv file from the URL
-    csv_url = (
-        "http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv"
-    )
+    csv_url = "http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv"
     try:
         data = pd.read_csv(csv_url, sep=";")
     except Exception as e:
@@ -64,9 +59,6 @@ def run(conf: ExperimentConf):
     train_y = train[["quality"]]
     test_y = test[["quality"]]
 
-    # alpha = float(sys.argv[1]) if len(sys.argv) > 1 else 0.5
-    # l1_ratio = float(sys.argv[2]) if len(sys.argv) > 2 else 0.5
-
     # start run
     lr = ElasticNet(alpha=alpha, l1_ratio=l1_ratio, random_state=42)
     lr.fit(train_x, train_y)
@@ -80,22 +72,28 @@ def run(conf: ExperimentConf):
     print("  MAE: %s" % mae)
     print("  R2: %s" % r2)
 
-    mlflow.log_param("alpha", alpha)
-    mlflow.log_param("l1_ratio", l1_ratio)
-    mlflow.log_metric("rmse", rmse)
-    mlflow.log_metric("r2", r2)
-    mlflow.log_metric("mae", mae)
+    mlflow.log_params(dict(
+        alpha=alpha,
+        l1_ratio=l1_ratio
+    ))
+    mlflow.log_metrics(dict(
+        rmse=rmse,
+        r2=r2,
+        mae=mae
+    ))
 
-    tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
+    # tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
 
-    # Model registry does not work with file store
-    if tracking_url_type_store != "file":
+    # # Model registry does not work with file store
+    # if tracking_url_type_store != "file":
 
-        # Register the model
-        # There are other ways to use the Model Registry, which depends on the use case,
-        # please refer to the doc for more information:
-        # https://mlflow.org/docs/latest/model-registry.html#api-workflow
-        mlflow.sklearn.log_model(lr, "model", registered_model_name="ElasticnetWineModel")
-    else:
-        mlflow.sklearn.log_model(lr, "model")
+    #     # Register the model
+    #     # There are other ways to use the Model Registry, which depends on the use case,
+    #     # please refer to the doc for more information:
+    #     # https://mlflow.org/docs/latest/model-registry.html#api-workflow
+    #     mlflow.sklearn.log_model(lr, "model", registered_model_name="ElasticnetWineModel")
+    # else:
+    #     mlflow.sklearn.log_model(lr, "model")
+
+    return lr
 
