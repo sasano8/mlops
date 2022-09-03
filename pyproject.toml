@@ -11,6 +11,23 @@ scikit-learn = "^1.1.2"
 pydantic = "^1.10.1"
 
 [tool.poetry.dev-dependencies]
+pytest = "^7.1.3"
+pre-commit = "^2.20.0"
+pytest-cov = "^3.0.0"
+black = "^22.8.0"
+flake8 = "^5.0.4"
+mypy = "^0.971"
+isort = "^5.10.1"
+
+[tool.black]
+extend-exclude = '''
+^/mlflow/*|
+^/mlruns/*
+'''
+
+[tool.isort]
+profile = "black"
+skip = ["mlflow", "mlruns", ".venv"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
