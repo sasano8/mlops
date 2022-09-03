@@ -1,0 +1,5 @@
+mlflow/*
+mlruns/*
+__pycache__
+.venv
+.python-version
