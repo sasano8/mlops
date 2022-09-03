@@ -39,4 +39,3 @@ ENV PYTHONUNBUFFERED 1
 RUN alias ll='ls -l'
 
 WORKDIR /root/app
-# ENV TZ=Asia/Tokyo
