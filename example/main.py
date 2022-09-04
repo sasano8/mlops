@@ -34,6 +34,11 @@ class Params(BaseModel):
     random_state: int = 42
 
 
+def create_model(params: Params):
+    lr = ElasticNet(**params.dict())
+    return lr
+
+
 @experiment(tags="default")
 def run(conf: ExperimentConf):
     warnings.filterwarnings("ignore")

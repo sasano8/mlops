@@ -1,6 +1,8 @@
 import flwr as fl
 import tensorflow as tf
 from pydantic import BaseModel
+from itertools import islice
+import numpy as np
 
 
 class FitConfig(BaseModel):
@@ -31,10 +33,42 @@ class CifarClient(fl.client.NumPyClient):
         self.model = self.create_model()
 
         (x_train, y_train), (x_test, y_test) = self.load_data()
+        # numpy.ndarray
+        """
+        [
+            [
+                [ 59  62  63]
+                [ 43  46  45]
+                [ 50  48  43]
+                [158 132 108]
+                [152 125 102]
+                [148 124 103]
+            ]
+            [
+                [ 25  24  21]
+                [ 16   7   0]
+                [ 49  27   8]
+                [118  84  50]
+                [120  84  50]
+                [109  73  42]
+            ]
+        ]
+        """
+
         self.x_train = x_train
         self.y_train = y_train
         self.x_test = x_test
         self.y_test = y_test
+
+        # 一般的にテストデータは30%などで分割される
+        print(
+            f"""
+        x_train={len(self.x_train)}
+        y_train={len(self.y_train)}
+        x_test={len(self.x_test)}
+        y_test={len(self.y_test)}
+        """
+        )
 
     def create_model(self):
         model = tf.keras.applications.MobileNetV2((32, 32, 3), classes=10, weights=None)

@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 class FlServerConfig(BaseModel):
     server_address: str = "0.0.0.0:8080"
-    config: fl.server.ServerConfig = dict(num_rounds=3)
+    config: fl.server.ServerConfig = fl.server.ServerConfig(num_rounds=3)
 
     def run(self):
         return fl.server.start_server(
@@ -18,4 +18,4 @@ class FlServerConfig(BaseModel):
 #     config=fl.server.ServerConfig(num_rounds=3),
 # )
 
-FlServerConfig().run()
+# FlServerConfig().run()

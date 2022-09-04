@@ -56,7 +56,7 @@ def get_or_create_experiment(name: str) -> Experiment:
     if experiment:
         return experiment
 
-    experiment_id = mlflow.create_experiment("sklearn-elasticnet-wine")
+    experiment_id = mlflow.create_experiment(name)
     experiment = mlflow.get_experiment(experiment_id)
     return experiment
 
@@ -109,11 +109,13 @@ def ml(func, *, tags: str = "default"):
                 # There are other ways to use the Model Registry, which depends on the use case,
                 # please refer to the doc for more information:
                 # https://mlflow.org/docs/latest/model-registry.html#api-workflow
-                mlflow.sklearn.log_model(
-                    model, "model", registered_model_name=conf.public_name
-                )
+                # mlflow.sklearn.log_model(
+                #     model, "model", registered_model_name=conf.public_name
+                # )
+                mlflow.keras.load_model(model, registered_model_name=conf.public_name)
             else:
-                mlflow.sklearn.log_model(model, "model")
+                # mlflow.sklearn.log_model(model, "model")
+                mlflow.keras.load_model(model, "model")
             return model
 
     return wrapped

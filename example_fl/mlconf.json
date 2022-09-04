@@ -1,0 +1,10 @@
+{
+    "id": "2",
+    "name": "keras-model",
+    "public_name": "keras-model",
+    "description": "",
+    "tags": {
+        "default": ""
+    },
+    "params": {}
+}
