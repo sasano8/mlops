@@ -39,3 +39,6 @@ ENV PYTHONUNBUFFERED 1
 RUN alias ll='ls -l'
 
 WORKDIR /root/app
+
+# nvidia/cuda:11.7.1-runtime-ubuntu20.04を使わずにイメージを作成する場合は
+# nvidia driverをインストールせず、cuda toolkitとcudnnだけを入れれば動く
